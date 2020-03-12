@@ -4,11 +4,14 @@ void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
   pinMode(13, INPUT);
+  Serial.println("Ready");
 }
 
 void loop() {
-   bool bitState;// = digitalRead(13);
+   int state = 0;// = digitalRead(13);
   unsigned char ch = 0;
+  
+   
 
    while(digitalRead(13) != LOW)
    {;}
@@ -16,74 +19,88 @@ void loop() {
   
   
   //line goes LOW
-     unsigned long tStart = millis();
+     unsigned long tStart = micros();
      while(digitalRead(13) == LOW) {;}
-     unsigned long tEnd = millis();
+     unsigned long tEnd = micros();
+     unsigned long timeHigh, timeLow;
   
   //store delay time in t
-     unsigned long t = tEnd - tStart;
+     unsigned long t = tEnd - tStart; //t was found with the total time preamble was low
      double checkTime = (double)t * 1.5;
   
-    bitState = true; //high
-
-  for(int i = 0; i < 8; i++)
+  for(int i = 0; i < 8;)
   {
-    
-    
-    //line is HIGH
-    unsigned long tStart2 = millis();
-    while(digitalRead(13) == HIGH);
-    unsigned long tEnd2 = millis();
-    unsigned long timeHigh = tEnd2 - tStart2;
-    
-    
-  
-     if(bitState == true) //bitState is high
-     {
-        if(timeHigh > checkTime ) //2t
+    switch(state)
+    {
+      //Flips the bit
+      case 0://You just had a one 
+        tStart = micros();
+        while(digitalRead(13) == HIGH);
+          tEnd = micros();
+        timeHigh = tEnd - tStart;
+        
+        if(timeHigh >= checkTime) //time High is high for 2 unit ts
         {
-          //todo: emit a 0
-          Serial.print("0");
+          state = 2;
+          //Serial.print("0");
           ch<<=1;
-          
-          bitState = false; //low
+          //ch=ch|0;
+          i++;
         }
-        else //1t
+        else//1 t
         {
-          //todo: emit a 1
-          Serial.print("1");
-          ch<<=1;
-          ch = ch|1;
-          
+          state = 1;
         }
-     }
-     else //bitState is low
-     {
-        if(timeHigh > checkTime ) //2t
+        
+        break;
+        
+      case 1:
+        //Serial.print("1");
+        ch<<=1;
+        ch=ch|1;
+        state = 0;
+        i++;
+        while(digitalRead(13) == LOW)
+          {;}
+        break;
+        
+      //Flips the bit
+      case 2:
+        tStart = micros();
+        while(digitalRead(13) == LOW);
+          tEnd = micros();
+        timeLow = tEnd - tStart;
+        if(timeLow >= checkTime) //time Low is low for 2 unit ts
         {
-          //todo: emit a 1
-          Serial.print("1");
+          state = 0;
+          //Serial.print("1");
           ch<<=1;
-          ch = ch|1;
-          
-          bitState = true; //high
+          ch=ch|1;
+          i++;
         }
-        else //1t
+        else//1 t
         {
-          //todo: emit a 0
-          Serial.print("0");
-          ch<<=1;
+          state = 3;
         }
-     }
-
-  
-  while(digitalRead(13) == LOW) {;}
+        
+        break;
+        
+      case 3:
+        //Serial.print("0");
+        ch<<=1;
+        i++;
+        state = 2;
+        while(digitalRead(13) == HIGH)
+          {;}
+        break;
+    }
   }//end of for loop
-
-  Serial.print(" - ");
+while(digitalRead(13) == LOW) {;}
+  
+  //Serial.print(" - ");
   Serial.print((char)ch);
-  Serial.print(" - ");
-  Serial.print(ch, BIN);
-  Serial.println();
+  //Serial.print(" - ");
+  //Serial.print(ch, BIN);
+  //Serial.println((char)ch);
   
 }
